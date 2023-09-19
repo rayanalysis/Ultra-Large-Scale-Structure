@@ -57,6 +57,7 @@ class GalaxySimulation(ShowBase):
         self.accept('space', self.toggle_dark_matter)
 
         self.check_grid = []
+        self.total_steps = 0
 
     def increase_dark_matter(self):
         self.dark_matter_factor += 0.1
@@ -116,7 +117,7 @@ class GalaxySimulation(ShowBase):
 
         new_grid_positions = np.array(new_grid_positions, dtype=np.float32)
         new_grid_velocities = np.array(new_grid_velocities, dtype=np.float32)
-        print(new_grid_positions[0])
+        # print(new_grid_positions[0])
 
         PTA_uchar_positions = self.positionTex.modify_ram_image()
         pta_np_positions = np.frombuffer(PTA_uchar_positions, dtype=np.float32)
@@ -137,9 +138,9 @@ class GalaxySimulation(ShowBase):
 
         output_data = memoryview(self.outputTex.get_ram_image_as('RGBA')).cast("B").cast("f")
         output_array = np.frombuffer(output_data, dtype=np.float32)
-        print(output_array.shape, '<-- the output_array shape.')
+        # print(output_array.shape, '<-- the output_array shape.')
         output_array = output_array.reshape(self.size, self.size, self.size, 4)
-        print(output_array.shape, '<-- the output_array shape.')
+        # print(output_array.shape, '<-- the output_array shape.')
                 
         for x in range(self.size):
             for y in range(self.size):
@@ -171,9 +172,12 @@ class GalaxySimulation(ShowBase):
                         self.grid[x][y][z] = 0
         
         base.cam.look_at((self.size/2, self.size/2, self.size/2))
+        self.total_steps += 1
+        # base.win.save_screenshot('galaxy_sim_' + str(self.total_steps) + '.png')
 
-        task.delay_time = 0.5
-        return task.again
+        # task.delay_time = 0.01
+        # return task.again
+        return task.cont
 
 
 base = GalaxySimulation()

@@ -55,8 +55,8 @@ void main() {
     vec3 force = computeForce(pos, int(gl_GlobalInvocationID.x));
     float mass = texelFetch(positionTexture, index, 0).w;
     force = force/1000;  // hardcoding a force reduction for visual study
-    mass = 100.0;  // hardcoding a mass because we're not supplying one yet
-    mass += darkMatterFactor * mass; // adding dark matter mass.
+    mass = 100.0 * 10;  // hardcoding a mass because we're not supplying one yet
+    mass += (darkMatterFactor * 1) * mass; // adding dark matter mass.
     vec3 acc = force / mass;
 
     vec3 newVel = vel + acc; 
