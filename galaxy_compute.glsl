@@ -9,11 +9,13 @@ uniform int size;
 uniform float darkMatterFactor;  // new uniform variable for dark matter factor.
 
 uniform sampler3D positionTexture; // particle positions and velocities
-layout(rgba32f) uniform image3D outputTexture; // Output positions 
+layout(rgba32f) uniform image3D outputTexture; // output positions 
 
 uniform sampler3D velocityTexture; // particle velocities
 layout(rgba32f) uniform image3D outputVelTexture; // output velocities
 
+/*
+// attempt to simulate DM-mass evolution
 vec3 computeForce(vec3 pos, int index) {
     vec3 force = vec3(0.0, 0.0, 0.0);
     float mass = texelFetch(positionTexture, ivec3(pos), 0).w;
@@ -35,6 +37,13 @@ vec3 computeForce(vec3 pos, int index) {
             }
         } 
     }   
+    return force;
+}
+*/
+// test force to prototype compute shader data cycle
+vec3 computeForce(vec3 pos, int index) {
+    vec3 force = vec3(0.0, 0.0, 0.0);
+    
     return force;
 }
 
