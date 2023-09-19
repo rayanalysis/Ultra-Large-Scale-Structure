@@ -1,6 +1,8 @@
 from direct.showbase.ShowBase import ShowBase
-from panda3d.core import load_prc_file_data, NodePath, TextNode, Vec3, LColor, ComputeNode, Shader, Texture, ShaderAttrib, WindowProperties, Point3
+from panda3d.core import load_prc_file_data, Vec4, NodePath, TextNode, Vec3, LColor, ComputeNode, Shader, Texture, ShaderAttrib, WindowProperties, Point3
 from direct.task import Task
+from direct.interval.IntervalGlobal import *
+from direct.filter.CommonFilters import CommonFilters
 import numpy as np
 import sys, random
 
@@ -19,6 +21,7 @@ class GalaxySimulation(ShowBase):
         win_props = WindowProperties.size(self.win.get_x_size(), self.win.get_y_size())
         # win_props.set_origin(100, 100)
         base.win.request_properties(win_props)
+        base.set_background_color(Vec4(0,0,0,1))
         self.grid = np.zeros((self.size, self.size, self.size), dtype=np.float32)
         self.init_grid()
         self.create_geometry()
@@ -49,7 +52,7 @@ class GalaxySimulation(ShowBase):
         self.final_compute_shader.set_shader_input("outputVelTexture", self.outputVelTex)
         
         self.task_mgr.add(self.update, "Update")
-        self.cam.set_pos(100, 200, 50)
+        self.cam.set_pos(40, 40, 40)
         self.cam.look_at(0,0,0)
         self.accept("escape", sys.exit)
         self.accept('arrow_up', self.increase_dark_matter)
@@ -57,6 +60,13 @@ class GalaxySimulation(ShowBase):
         self.accept('space', self.toggle_dark_matter)
 
         self.check_grid = []
+        self.total_steps = 0
+
+        scene_filters = CommonFilters(base.win, base.cam)
+        scene_filters.set_bloom(size='medium')
+        scene_filters.set_exposure_adjust(1.1)
+        scene_filters.set_gamma_adjust(1.1)
+        scene_filters.set_blur_sharpen(0.7)
 
     def increase_dark_matter(self):
         self.dark_matter_factor += 0.1
@@ -70,7 +80,7 @@ class GalaxySimulation(ShowBase):
 
     def create_geometry(self):
         self.cube_model = self.loader.load_model("1m_cube.gltf")
-        self.cube_model.set_scale(0.1)
+        self.cube_model.set_scale(0.02)
         self.cube_model.set_name("CubeModel")
 
         self.instance_root = NodePath("InstanceRoot")
@@ -116,7 +126,7 @@ class GalaxySimulation(ShowBase):
 
         new_grid_positions = np.array(new_grid_positions, dtype=np.float32)
         new_grid_velocities = np.array(new_grid_velocities, dtype=np.float32)
-        print(new_grid_positions[0])
+        # print(new_grid_positions[0])
 
         PTA_uchar_positions = self.positionTex.modify_ram_image()
         pta_np_positions = np.frombuffer(PTA_uchar_positions, dtype=np.float32)
@@ -137,9 +147,9 @@ class GalaxySimulation(ShowBase):
 
         output_data = memoryview(self.outputTex.get_ram_image_as('RGBA')).cast("B").cast("f")
         output_array = np.frombuffer(output_data, dtype=np.float32)
-        print(output_array.shape, '<-- the output_array shape.')
+        # print(output_array.shape, '<-- the output_array shape.')
         output_array = output_array.reshape(self.size, self.size, self.size, 4)
-        print(output_array.shape, '<-- the output_array shape.')
+        # print(output_array.shape, '<-- the output_array shape.')
                 
         for x in range(self.size):
             for y in range(self.size):
@@ -165,15 +175,22 @@ class GalaxySimulation(ShowBase):
                         if not (np.isnan(output_array[x, y, z, :3]).any() or np.isinf(output_array[x, y, z, :3]).any()): 
                             self.grid[x][y][z] = [output_array[x, y, z, :3].tolist(), output_array[x, y, z, 3:].tolist()]
                             instance = self.instance_root.attach_new_node("Instance")
-                            instance.set_pos(Point3(*output_array[x, y, z, :3]))
                             self.cube_model.instance_to(instance)
+                            instance.set_pos(Point3(*output_array[x, y, z, :3]))
+                            # seq = Sequence()
+                            # inter = LerpPosInterval(instance, 1, Point3(*output_array[x, y, z, :3]))
+                            # seq.append(inter)
+                            # seq.start()
                     else:
                         self.grid[x][y][z] = 0
         
-        base.cam.look_at((self.size/2, self.size/2, self.size/2))
+        # base.cam.look_at((self.size/2, self.size/2, self.size/2))
+        self.total_steps += 1
+        # base.win.save_screenshot('galaxy_sim_' + str(self.total_steps) + '.png')
 
-        task.delay_time = 0.5
-        return task.again
+        # task.delay_time = 1
+        # return task.again
+        return task.cont
 
 
 base = GalaxySimulation()
