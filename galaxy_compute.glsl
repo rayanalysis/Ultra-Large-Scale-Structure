@@ -14,7 +14,7 @@ layout(rgba32f) uniform image3D outputTexture; // output positions
 uniform sampler3D velocityTexture; // particle velocities
 layout(rgba32f) uniform image3D outputVelTexture; // output velocities
 
-/*
+
 // attempt to simulate DM-mass evolution
 vec3 computeForce(vec3 pos, int index) {
     vec3 force = vec3(0.0, 0.0, 0.0);
@@ -39,14 +39,14 @@ vec3 computeForce(vec3 pos, int index) {
     }   
     return force;
 }
-*/
+/*
 // test force to prototype compute shader data cycle
 vec3 computeForce(vec3 pos, int index) {
     vec3 force = vec3(0.0, 0.0, 0.0);
     
     return force;
 }
-
+*/
 void main() {
     ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
     vec3 pos = texelFetch(positionTexture, index, 0).xyz;
@@ -54,6 +54,8 @@ void main() {
 
     vec3 force = computeForce(pos, int(gl_GlobalInvocationID.x));
     float mass = texelFetch(positionTexture, index, 0).w;
+    force = force/1000;  // hardcoding a force reduction for visual study
+    mass = 100.0;  // hardcoding a mass because we're not supplying one yet
     mass += darkMatterFactor * mass; // adding dark matter mass.
     vec3 acc = force / mass;
 

@@ -172,7 +172,7 @@ class GalaxySimulation(ShowBase):
         
         base.cam.look_at((self.size/2, self.size/2, self.size/2))
 
-        task.delay_time = 5
+        task.delay_time = 0.5
         return task.again
 
 
