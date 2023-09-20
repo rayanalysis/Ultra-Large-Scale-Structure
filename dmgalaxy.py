@@ -1,5 +1,5 @@
 from direct.showbase.ShowBase import ShowBase
-from panda3d.core import load_prc_file_data, Vec4, NodePath, TextNode, Vec3, LColor, ComputeNode, Shader, Texture, ShaderAttrib, WindowProperties, Point3
+from panda3d.core import TextNode, load_prc_file_data, Vec4, NodePath, TextNode, Vec3, LColor, ComputeNode, Shader, Texture, ShaderAttrib, WindowProperties, Point3
 from direct.task import Task
 from direct.interval.IntervalGlobal import *
 from direct.filter.CommonFilters import CommonFilters
@@ -10,16 +10,18 @@ import sys, random
 class GalaxySimulation(ShowBase):
     def __init__(self):
         load_prc_file_data("", """
-            win-size 900 600
+            win-size 1600 900
             window-title Galaxy Simulation
+            framebuffer-multisample 1
+            multisamples 4
         """)
 
         super().__init__()
 
         self.size = 20
         self.dark_matter_factor = 1.0
+        self.mass_factor = 10000
         win_props = WindowProperties.size(self.win.get_x_size(), self.win.get_y_size())
-        # win_props.set_origin(100, 100)
         base.win.request_properties(win_props)
         base.set_background_color(Vec4(0,0,0,1))
         self.grid = np.zeros((self.size, self.size, self.size), dtype=np.float32)
@@ -55,10 +57,7 @@ class GalaxySimulation(ShowBase):
         self.cam.set_pos(40, 40, 40)
         self.cam.look_at(0,0,0)
         self.accept("escape", sys.exit)
-        self.accept('arrow_up', self.increase_dark_matter)
-        self.accept('arrow_down', self.decrease_dark_matter)
-        self.accept('space', self.toggle_dark_matter)
-
+        
         self.check_grid = []
         self.total_steps = 0
 
@@ -66,17 +65,49 @@ class GalaxySimulation(ShowBase):
         scene_filters.set_bloom(size='medium')
         scene_filters.set_exposure_adjust(1.1)
         scene_filters.set_gamma_adjust(1.1)
-        scene_filters.set_blur_sharpen(0.7)
+        scene_filters.set_blur_sharpen(0.25)
+
+        self.menu_items()
+        self.accept('arrow_up', self.increase_dark_matter)
+        self.accept('arrow_down', self.decrease_dark_matter)
+        self.accept('arrow_right', self.increase_mass)
+        self.accept('arrow_left', self.decrease_mass)
+        self.arrow_text_1 = "arrow up/down \n" + "dark matter factor: "
+        self.arrow_text_2 = "\n\narrow left/right \n" + "mass factor: "
+        self.zoom_text = "\n\n1 to zoom out\n2 to zoom in"
+        self.accept('1', self.zoom_in)
+        self.accept('2', self.zoom_out)
+
+    def menu_items(self):
+        self.text_1 = TextNode('text_1_node')
+        self.text_1.set_text('')
+        self.text_1_node = self.aspect2d.attach_new_node(self.text_1)
+        self.text_1_node.set_scale(0.04)
+        self.text_1_node.set_pos(-1.4, 0, 0.92)
+        nunito_font = loader.load_font('fonts/Nunito/Nunito-Light.ttf')
+        nunito_font.set_pixels_per_unit(100)
+        nunito_font.set_page_size(512, 512)
+        self.text_1.set_font(nunito_font)
+
+    def zoom_in(self):
+        self.camLens.set_focal_length(self.camLens.get_focal_length() - 0.2)
+
+    def zoom_out(self):
+        self.camLens.set_focal_length(self.camLens.get_focal_length() + 0.2)
+
+    def increase_mass(self):
+        self.mass_factor += 100.0
+
+    def decrease_mass(self):
+        self.mass_factor -= 100.0
+        if self.mass_factor <= 0: self.mass_factor = 0.001
 
     def increase_dark_matter(self):
-        self.dark_matter_factor += 0.1
+        self.dark_matter_factor += 0.5
 
     def decrease_dark_matter(self):
-        self.dark_matter_factor -= 0.1
-        if self.dark_matter_factor < 0: self.dark_matter_factor = 0
-
-    def toggle_dark_matter(self):
-        self.dark_matter_factor = self.dark_matter_factor == 0 and 1 or 0
+        self.dark_matter_factor -= 0.5
+        if self.dark_matter_factor <= 0: self.dark_matter_factor = 0.001
 
     def create_geometry(self):
         self.cube_model = self.loader.load_model("1m_cube.gltf")
@@ -113,6 +144,7 @@ class GalaxySimulation(ShowBase):
         self.check_grid = self.grid
         
     def update(self, task):
+        self.text_1.set_text(self.arrow_text_1 + str(round(self.dark_matter_factor, 2)) + self.arrow_text_2 + str(round(self.mass_factor, 2)) + self.zoom_text)
         new_grid_positions = []
         new_grid_velocities = []
         # print(self.grid, '<-- that is self.grid')
@@ -139,6 +171,7 @@ class GalaxySimulation(ShowBase):
         self.final_compute_shader.set_shader_input("positionTexture", self.positionTex)
         self.final_compute_shader.set_shader_input("velocityTexture", self.velocityTex)
         self.final_compute_shader.set_shader_input("darkMatterFactor", self.dark_matter_factor)
+        self.final_compute_shader.set_shader_input("massFactor", self.mass_factor)
 
         compute_attrib = self.final_compute_shader.get_attrib(ShaderAttrib)
         base.graphicsEngine.dispatch_compute((self.size, self.size, self.size), compute_attrib, base.win.get_gsg())

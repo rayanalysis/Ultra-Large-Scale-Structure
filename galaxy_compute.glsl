@@ -1,14 +1,15 @@
 #version 430
 
 struct Particle {
-    vec4 pos_vel; // positions = vec3(pos_vel), velocity = pos_vel.w
+    vec4 pos_vel;  // positions = vec3(pos_vel), velocity = pos_vel.w
 };
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 uniform int size;
 uniform float darkMatterFactor;  // new uniform variable for dark matter factor.
+uniform float massFactor;  // new uniform variable for invariant masses
 
-uniform sampler3D positionTexture; // particle positions and velocities
+uniform sampler3D positionTexture;  // particle positions and velocities
 layout(rgba32f) uniform image3D outputTexture; // output positions 
 
 uniform sampler3D velocityTexture; // particle velocities
@@ -29,9 +30,9 @@ vec3 computeForce(vec3 pos, int index) {
                     otherMass += darkMatterFactor * otherMass; // adding dark matter mass.
 
                     vec3 r = otherPos - pos;
-                    float dist = length(r) + 0.1; // to prevent division by zero
+                    float dist = length(r) + 0.1;  // to prevent division by zero
                     vec3 forceDir = normalize(r);
-                    float forceMag = mass * otherMass / (dist * dist); // correct value of G here.
+                    float forceMag = mass * otherMass / (dist * dist);  // correct value of G here.
                     force += forceMag * forceDir;
                 }
             }
@@ -55,7 +56,7 @@ void main() {
     vec3 force = computeForce(pos, int(gl_GlobalInvocationID.x));
     float mass = texelFetch(positionTexture, index, 0).w;
     force = force/1000;  // hardcoding a force reduction for visual study
-    mass = 100.0 * 10;  // hardcoding a mass because we're not supplying one yet
+    mass = massFactor;  // hardcoding a mass because we're not generating one yet
     mass += (darkMatterFactor * 1) * mass; // adding dark matter mass.
     vec3 acc = force / mass;
 
@@ -63,5 +64,5 @@ void main() {
     vec3 newPos = pos + newVel;
 
     imageStore(outputVelTexture, index, vec4(newVel, 0.0));
-    imageStore(outputTexture, index, vec4(newPos, mass)); // storing the original mass without Dark Matter.
+    imageStore(outputTexture, index, vec4(newPos, mass));  // storing the original mass without Dark Matter.
 }
