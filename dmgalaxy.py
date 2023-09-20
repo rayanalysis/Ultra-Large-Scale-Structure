@@ -25,7 +25,8 @@ class GalaxySimulation(ShowBase):
         base.win.request_properties(win_props)
         base.set_background_color(Vec4(0,0,0,1))
         self.grid = np.zeros((self.size, self.size, self.size), dtype=np.float32)
-        self.init_grid()
+        # self.init_grid()
+        self.init_grid_spiral()
         self.create_geometry()
 
         self.positionTex = Texture("positions")
@@ -131,6 +132,51 @@ class GalaxySimulation(ShowBase):
         particle_positions = np.random.rand(num_particles, 3) * self.size
         particle_velocities = np.zeros((num_particles, 3), dtype=np.float32)
         
+        # initialize every cell in the grid with default values (no particles initially)
+        self.grid = [[[ [ [0,0,0], [0,0,0] ] for _ in range(self.size)] for _ in range(self.size)] for _ in range(self.size)]
+
+        # populate the grid with given positions and velocities
+        for i in range(num_particles):
+            x, y, z = particle_positions[i].astype(int)
+            x, y, z = np.clip([x, y, z], 0, self.size-1)  # ensure x, y, z are within valid index ranges
+            self.grid[x][y][z] = [particle_positions[i].tolist(), particle_velocities[i].tolist()]
+
+        print(self.grid, '<-- that is the starting grid.')
+        self.check_grid = self.grid
+
+    def init_grid_spiral(self, sparsity=0.1, arm_sparsity=0.5):
+        # generate a smaller number of particles based on sparsity value
+        center_mass_particles = int(self.size * self.size * self.size * sparsity)
+        arm_particles = int(self.size * self.size * self.size * arm_sparsity)
+            
+        # generate uniform random particles for center mass
+        center_positions = np.random.rand(center_mass_particles, 3) * self.size
+        center_velocities = np.zeros((center_mass_particles, 3), dtype=np.float32)
+        
+        # generate particles in spiral arms
+        R = self.size / 2 # radius of arms
+        arm_positions = []
+        
+        for _ in range(arm_particles):
+            # choose random spiral arm
+            theta = 2. * np.pi * np.random.rand()
+            z = (np.random.rand() - 0.5) * self.size
+            if np.random.rand() > 0.5:
+                x = R * np.cos(theta) + R
+                y = R * np.sin(theta) + R
+            else:
+                x = R * np.cos(theta + np.pi) + R
+                y = R * np.sin(theta + np.pi) + R
+            arm_positions.append([x, y, z])
+            
+        arm_positions = np.array(arm_positions)
+        arm_velocities = np.zeros((arm_particles, 3), dtype=np.float32)
+        
+        # combine particle arrays
+        particle_positions = np.concatenate((center_positions, arm_positions), axis=0)
+        particle_velocities = np.concatenate((center_velocities, arm_velocities), axis=0)
+        num_particles = len(particle_positions)
+            
         # initialize every cell in the grid with default values (no particles initially)
         self.grid = [[[ [ [0,0,0], [0,0,0] ] for _ in range(self.size)] for _ in range(self.size)] for _ in range(self.size)]
 
