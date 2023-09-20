@@ -20,7 +20,7 @@ class GalaxySimulation(ShowBase):
 
         self.size = 20
         self.dark_matter_factor = 1.0
-        self.mass_factor = 10000
+        self.mass_factor = 1000
         win_props = WindowProperties.size(self.win.get_x_size(), self.win.get_y_size())
         base.win.request_properties(win_props)
         base.set_background_color(Vec4(0,0,0,1))
