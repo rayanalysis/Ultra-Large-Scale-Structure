@@ -6,8 +6,9 @@ struct Particle {
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 uniform int size;
-uniform float darkMatterFactor;  // new uniform variable for dark matter factor.
+uniform float darkMatterFactor;  // new uniform variable for dark matter factor
 uniform float massFactor;  // new uniform variable for invariant masses
+uniform float forceReductionFactor;  // new uniform variable for force reduction
 
 uniform sampler3D positionTexture;  // particle positions and velocities
 layout(rgba32f) uniform image3D outputTexture; // output positions 
@@ -55,7 +56,7 @@ void main() {
 
     vec3 force = computeForce(pos, int(gl_GlobalInvocationID.x));
     float mass = texelFetch(positionTexture, index, 0).w;
-    force = force/1000;  // hardcoding a force reduction for visual study
+    force = force/forceReductionFactor;  // hardcoding a force reduction for visual study
     mass = massFactor;  // hardcoding a mass because we're not generating one yet
     mass += (darkMatterFactor * 1) * mass; // adding dark matter mass.
     vec3 acc = force / mass;
@@ -64,5 +65,5 @@ void main() {
     vec3 newPos = pos + newVel;
 
     imageStore(outputVelTexture, index, vec4(newVel, 0.0));
-    imageStore(outputTexture, index, vec4(newPos, mass));  // storing the original mass without Dark Matter.
+    imageStore(outputTexture, index, vec4(newPos, mass));  // storing the original mass without DM separately stored
 }

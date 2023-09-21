@@ -21,6 +21,7 @@ class GalaxySimulation(ShowBase):
         self.size = 20
         self.dark_matter_factor = 1.0
         self.mass_factor = 1000
+        self.force_reduction_factor = 1000
         win_props = WindowProperties.size(self.win.get_x_size(), self.win.get_y_size())
         base.win.request_properties(win_props)
         base.set_background_color(Vec4(0,0,0,1))
@@ -75,9 +76,11 @@ class GalaxySimulation(ShowBase):
         self.accept('arrow_left', self.decrease_mass)
         self.arrow_text_1 = "arrow up/down \n" + "dark matter factor: "
         self.arrow_text_2 = "\n\narrow left/right \n" + "mass factor: "
-        self.zoom_text = "\n\n1 to zoom out\n2 to zoom in"
+        self.zoom_text = "\n\n1 to zoom out\n2 to zoom in\n\n" + "3 to reduce force\n" + "4 to increase force\n"
         self.accept('1', self.zoom_in)
         self.accept('2', self.zoom_out)
+        self.accept('3', self.increase_force_reduction)
+        self.accept('4', self.decrease_force_reduction)
 
     def menu_items(self):
         self.text_1 = TextNode('text_1_node')
@@ -95,6 +98,13 @@ class GalaxySimulation(ShowBase):
 
     def zoom_out(self):
         self.camLens.set_focal_length(self.camLens.get_focal_length() + 0.2)
+
+    def increase_force_reduction(self):
+        self.force_reduction_factor += 100.0
+
+    def decrease_force_reduction(self):
+        self.force_reduction_factor -= 100.0
+        if self.force_reduction_factor <= 0: self.force_reduction_factor = 1.0
 
     def increase_mass(self):
         self.mass_factor += 100.0
@@ -190,7 +200,8 @@ class GalaxySimulation(ShowBase):
         self.check_grid = self.grid
         
     def update(self, task):
-        self.text_1.set_text(self.arrow_text_1 + str(round(self.dark_matter_factor, 2)) + self.arrow_text_2 + str(round(self.mass_factor, 2)) + self.zoom_text)
+        self.text_1.set_text(self.arrow_text_1 + str(round(self.dark_matter_factor, 2)) + self.arrow_text_2 +
+                             str(round(self.mass_factor, 2)) + self.zoom_text + 'FRF: ' + str(round(self.force_reduction_factor, 2)))
         new_grid_positions = []
         new_grid_velocities = []
         # print(self.grid, '<-- that is self.grid')
@@ -218,6 +229,7 @@ class GalaxySimulation(ShowBase):
         self.final_compute_shader.set_shader_input("velocityTexture", self.velocityTex)
         self.final_compute_shader.set_shader_input("darkMatterFactor", self.dark_matter_factor)
         self.final_compute_shader.set_shader_input("massFactor", self.mass_factor)
+        self.final_compute_shader.set_shader_input("forceReductionFactor", self.force_reduction_factor)
 
         compute_attrib = self.final_compute_shader.get_attrib(ShaderAttrib)
         base.graphicsEngine.dispatch_compute((self.size, self.size, self.size), compute_attrib, base.win.get_gsg())
