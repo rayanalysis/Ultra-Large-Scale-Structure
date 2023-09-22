@@ -1,10 +1,11 @@
 from direct.showbase.ShowBase import ShowBase
-from panda3d.core import TextNode, load_prc_file_data, Vec4, NodePath, TextNode, Vec3, LColor, ComputeNode, Shader, Texture, ShaderAttrib, WindowProperties, Point3
+from panda3d.core import ShaderBuffer, GeomEnums, TextNode, load_prc_file_data, Vec4, NodePath, TextNode, Vec3, LColor, ComputeNode, Shader, Texture, ShaderAttrib, WindowProperties, Point3
 from direct.task import Task
 from direct.interval.IntervalGlobal import *
 from direct.filter.CommonFilters import CommonFilters
 import numpy as np
 import sys, random
+from array import array
 
 
 class GalaxySimulation(ShowBase):
@@ -21,7 +22,7 @@ class GalaxySimulation(ShowBase):
         self.size = 20
         self.dark_matter_factor = 1.0
         self.mass_factor = 1000
-        self.force_reduction_factor = 1000
+        self.force_reduction_factor = 5.0
         win_props = WindowProperties.size(self.win.get_x_size(), self.win.get_y_size())
         base.win.request_properties(win_props)
         base.set_background_color(Vec4(0,0,0,1))
@@ -33,13 +34,6 @@ class GalaxySimulation(ShowBase):
         self.positionTex = Texture("positions")
         self.positionTex.setup_3d_texture(self.size, self.size, self.size, Texture.T_float, Texture.F_rgba32)
         self.positionTex.clear_image()
-        self.velocityTex = Texture("velocities")
-        self.velocityTex.setup_3d_texture(self.size, self.size, self.size, Texture.T_float, Texture.F_rgba32)
-        self.velocityTex.clear_image()
-        self.outputVelTex = Texture("outputVelocities")
-        self.outputVelTex.setup_3d_texture(self.size, self.size, self.size, Texture.T_float, Texture.F_rgba32)
-        self.outputVelTex.clear_image()
-        
         self.outputTex = Texture("output")
         self.outputTex.setup_3d_texture(self.size, self.size, self.size, Texture.T_float, Texture.F_rgba32)
         self.outputTex.clear_image()
@@ -51,9 +45,22 @@ class GalaxySimulation(ShowBase):
         self.final_compute_shader.set_shader(shader)
         self.final_compute_shader.set_shader_input("size", self.size)
         self.final_compute_shader.set_shader_input("positionTexture", self.positionTex)
-        self.final_compute_shader.set_shader_input("velocityTexture", self.velocityTex)
         self.final_compute_shader.set_shader_input("outputTexture", self.outputTex)
-        self.final_compute_shader.set_shader_input("outputVelTexture", self.outputVelTex)
+
+        # set up the velocity SSBO
+        # num_particles = int(self.size*self.size*self.size * 0.1)
+        # data_list = np.zeros((num_particles, 3), dtype=np.float32)
+        '''
+        data_list = [1.,1.,1.]
+        initial_data = array('f', data_list)
+        shader_buffer_1 = ShaderBuffer('velocity_data', initial_data.tobytes(), GeomEnums.UH_static)
+        self.final_compute_shader.set_shader_input("velocity_data", shader_buffer_1)
+        '''
+        num_particles = self.size * self.size * self.size
+        data_list = np.zeros((num_particles, 3), dtype=np.float32).flatten().tolist()
+        initial_data = array('f', data_list)
+        shader_buffer_1 = ShaderBuffer('velocity_data', initial_data.tobytes(), GeomEnums.UH_static)
+        self.final_compute_shader.set_shader_input("velocity_data", shader_buffer_1)
         
         self.task_mgr.add(self.update, "Update")
         self.cam.set_pos(40, 40, 40)
@@ -100,10 +107,10 @@ class GalaxySimulation(ShowBase):
         self.camLens.set_focal_length(self.camLens.get_focal_length() + 0.2)
 
     def increase_force_reduction(self):
-        self.force_reduction_factor += 100.0
+        self.force_reduction_factor += 1.0
 
     def decrease_force_reduction(self):
-        self.force_reduction_factor -= 100.0
+        self.force_reduction_factor -= 1.0
         if self.force_reduction_factor <= 0: self.force_reduction_factor = 1.0
 
     def increase_mass(self):
@@ -221,12 +228,7 @@ class GalaxySimulation(ShowBase):
         pta_np_positions = np.frombuffer(PTA_uchar_positions, dtype=np.float32)
         np.copyto(pta_np_positions[:len(new_grid_positions)], new_grid_positions)
 
-        PTA_uchar_velocities = self.velocityTex.modify_ram_image()
-        pta_np_velocities = np.frombuffer(PTA_uchar_velocities, dtype=np.float32)
-        np.copyto(pta_np_velocities[:len(new_grid_velocities)], new_grid_velocities)
-
         self.final_compute_shader.set_shader_input("positionTexture", self.positionTex)
-        self.final_compute_shader.set_shader_input("velocityTexture", self.velocityTex)
         self.final_compute_shader.set_shader_input("darkMatterFactor", self.dark_matter_factor)
         self.final_compute_shader.set_shader_input("massFactor", self.mass_factor)
         self.final_compute_shader.set_shader_input("forceReductionFactor", self.force_reduction_factor)
