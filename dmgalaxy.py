@@ -121,7 +121,7 @@ class GalaxySimulation(ShowBase):
         if self.dark_matter_factor <= 0: self.dark_matter_factor = 0.001
 
     def create_geometry(self):
-        self.cube_model = self.loader.load_model("1m_cube.gltf")
+        self.cube_model = self.loader.load_model("1m_cube.bam")
         self.cube_model.set_scale(0.02)
         self.cube_model.set_name("CubeModel")
 

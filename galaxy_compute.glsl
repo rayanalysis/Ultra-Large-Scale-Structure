@@ -65,5 +65,7 @@ void main() {
     vec3 newPos = pos + newVel;
 
     imageStore(outputVelTexture, index, vec4(newVel, 0.0));
+    barrier();
     imageStore(outputTexture, index, vec4(newPos, mass));  // storing the original mass without DM separately stored
+    barrier();
 }
