@@ -284,5 +284,6 @@ class GalaxySimulation(ShowBase):
         return task.cont
 
 
-base = GalaxySimulation()
-base.run()
+if __name__ == "__main__":
+    base = GalaxySimulation()
+    base.run()
